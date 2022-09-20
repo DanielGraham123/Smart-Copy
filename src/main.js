@@ -100,7 +100,6 @@ async function getWorks() {
 async function getLicenses() {
   const licensesCount = await contract.methods.readLicensesLength().call();
   editWorkBtn.style.display = "none";
-  console.log("number of licenses", licensesCount);
   const _licenses = [];
   for (let i = 0; i < licensesCount; i++) {
     let _license = new Promise(async (resolve, reject) => {
@@ -117,8 +116,6 @@ async function getLicenses() {
     _licenses.push(_license);
   }
   licenses = await Promise.all(_licenses);
-  // renderWorks();
-  console.log("licenses: ", licenses);
 }
 
 function renderWorks() {
@@ -326,12 +323,8 @@ function startCookieTimer() {
   // all available cookies
   let cookieLicenses = Cookies.get();
 
-  console.log("all cookies: ", cookieLicenses);
-
   // the available cookie id's
   let cookieIds = Object.keys(cookieLicenses);
-
-  console.log("cookie ids: ", cookieIds);
 
   let newLicenses = licenses.filter((license) =>
     cookieIds.includes(license.workIndex.toString())
@@ -347,14 +340,9 @@ function startCookieTimer() {
       (newLicense) => newLicense.issuedOn === cookieOfInterest
     )[0];
 
-    console.log("cookie of interest: ", cookieOfInterest, licenseOfInterest);
-
     licensesOfInterest.push(licenseOfInterest);
 
     interestCount = licensesOfInterest.length;
-
-    console.log("licenses Interest: ", licensesOfInterest);
-    console.log("Interest count: ", interestCount);
   }
 }
 
@@ -434,7 +422,6 @@ selectForm.addEventListener("change", function () {
 // add a new work
 document.querySelector("#newWorkBtn").addEventListener("click", async (e) => {
   let isSelling = document.getElementById("selling").checked;
-  console.log("price: ", document.getElementById("newPrice").value);
   const params = [
     [
       document.getElementById("newWorkName").value,
@@ -469,10 +456,8 @@ document.querySelector("#newWorkBtn").addEventListener("click", async (e) => {
 document
   .querySelector("#updateWorkBtn")
   .addEventListener("click", async (e) => {
-    console.log("selected edit: ", selectedWork);
     if (selectedWork) {
       let isSelling = document.getElementById("editSelling").checked;
-      console.log("price: ", document.getElementById("editPrice").value);
       const params = [
         selectedWork.index,
         [
@@ -516,7 +501,6 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
     if (confirmed) {
       const index = e.target.id;
-      console.log("delete index: ", index, works[index]);
 
       notification("⌛ Delete work in progress...");
 
@@ -551,8 +535,6 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 document.querySelector("#marketplace").addEventListener("click", async (e) => {
   if (e.target.className.includes("buyBtn")) {
     const index = e.target.id;
-    console.log("index: ", index, works[index]);
-
     notification("⌛ Waiting for payment approval...");
 
     try {
@@ -618,7 +600,6 @@ Notification.requestPermission().then((perm) => {
       body: "Welcome",
       tag: "Welcome",
     });
-    console.log("notification should be there");
   } else {
     notifyPermGranted = false;
   }
@@ -628,29 +609,22 @@ Notification.requestPermission().then((perm) => {
 // checks if cookie license is set
 setInterval(() => {
   if (licensesOfInterest.length > 0) {
-    console.log("licenses interval: ", licensesOfInterest);
     licensesOfInterest.forEach((license) => {
-      // times on any expired license
+      // timesout on any expired license
       setTimeout(() => {
+        // the time set by the contract never equals Date.now,
+        // so I opted to check only the cookies
         if (
           // !license.expired &&
-          Cookies.get(license.workIndex)
+          !Cookies.get(license.workIndex)
           // license.expiresOn == Date.now()
         ) {
-          // cookie and license have
-          console.log("cookie: ", license.workIndex, " is still there");
-
-          // remove the license
-          // removeLicense(license);
-        } else {
           console.log("cookie: ", license.workIndex, " is gone/not");
 
           licensesOfInterest = popLicense(license.workIndex);
         }
       }, 60000);
     });
-  } else {
-    console.log("empty license interest");
   }
 }, 10000);
 
@@ -658,8 +632,8 @@ setInterval(() => {
 // and reload
 setInterval(() => {
   if (interestCount - 1 === licensesOfInterest.length) {
-    console.log("you can reload");
     interestCount--;
+    console.log("Reloading...");
 
     location.reload();
   } else {
