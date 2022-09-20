@@ -14,20 +14,24 @@ const celoExplorer = "https://alfajores-blockscout.celo-testnet.org";
 let kit;
 let contract;
 let works = [];
+let licenses = [];
 
-var editWorkBtn = document.querySelector("#editWorkBtn");
+let licensesOfInterest = [];
+let interestCount = 0;
 
-var selectForm = document.querySelector(".form-select");
-var editDiv = document.querySelector("#editDiv");
-var selectedWork = {};
+let editWorkBtn = document.querySelector("#editWorkBtn");
 
-var notifyPermGranted = false;
+let selectForm = document.querySelector(".form-select");
+let editDiv = document.querySelector("#editDiv");
+let selectedWork = {};
 
-var editWorkName = document.querySelector("#editWorkName");
-var editImageUrl = document.querySelector("#editImgUrl");
-var editWorkDesc = document.querySelector("#editWorkDescription");
-var editSelling = document.querySelector("#editSelling");
-var editPrice = document.querySelector("#editPrice");
+let notifyPermGranted = false;
+
+let editWorkName = document.querySelector("#editWorkName");
+let editImageUrl = document.querySelector("#editImgUrl");
+let editWorkDesc = document.querySelector("#editWorkDescription");
+let editSelling = document.querySelector("#editSelling");
+let editPrice = document.querySelector("#editPrice");
 
 editDiv.style.display = "none";
 
@@ -93,6 +97,30 @@ async function getWorks() {
   renderWorks();
 }
 
+async function getLicenses() {
+  const licensesCount = await contract.methods.readLicensesLength().call();
+  editWorkBtn.style.display = "none";
+  console.log("number of licenses", licensesCount);
+  const _licenses = [];
+  for (let i = 0; i < licensesCount; i++) {
+    let _license = new Promise(async (resolve, reject) => {
+      let p = await contract.methods.licenses(i).call();
+      resolve({
+        index: i,
+        buyer: p[0],
+        workIndex: parseInt(p[1]),
+        issuedOn: parseInt(p[2]),
+        expiresOn: parseInt(p[3]),
+        expired: p[4],
+      });
+    });
+    _licenses.push(_license);
+  }
+  licenses = await Promise.all(_licenses);
+  // renderWorks();
+  console.log("licenses: ", licenses);
+}
+
 function renderWorks() {
   document.getElementById("marketplace").innerHTML = "";
   let cleanedWorks = works.filter((work) => !work.deleted);
@@ -111,7 +139,7 @@ function renderWorks() {
 }
 
 function resetSelect() {
-  var length = selectForm.options.length;
+  let length = selectForm.options.length;
   for (let i = length - 1; i >= 1; i--) {
     selectForm.options[i] = null;
   }
@@ -294,21 +322,67 @@ function notificationOff() {
   document.querySelector(".alert").style.display = "none";
 }
 
-function startCookieTimer(work) {
-  Cookies.set(work.index, work.name, { expires: 0.00138889 }); // for 2 minutes
+function startCookieTimer() {
+  // all available cookies
+  let cookieLicenses = Cookies.get();
+
+  console.log("all cookies: ", cookieLicenses);
+
+  // the available cookie id's
+  let cookieIds = Object.keys(cookieLicenses);
+
+  console.log("cookie ids: ", cookieIds);
+
+  let newLicenses = licenses.filter((license) =>
+    cookieIds.includes(license.workIndex.toString())
+  );
+
+  // retrieve the licenses with latest issued date/time
+  if (newLicenses.length > 0) {
+    console.log("new licenses: ", newLicenses);
+
+    let cookieOfInterest = Math.max(...newLicenses.map((x) => x.issuedOn));
+
+    let licenseOfInterest = newLicenses.filter(
+      (newLicense) => newLicense.issuedOn === cookieOfInterest
+    )[0];
+
+    console.log("cookie of interest: ", cookieOfInterest, licenseOfInterest);
+
+    licensesOfInterest.push(licenseOfInterest);
+
+    interestCount = licensesOfInterest.length;
+
+    console.log("licenses Interest: ", licensesOfInterest);
+    console.log("Interest count: ", interestCount);
+  }
 }
 
-let licenseInterval = setInterval(() => {
-  if (works.length > 0) {
-    works.forEach((work) => {
-      if (Cookies.get(work.index)) {
-        // console.log("cookie: ", work.index, " is still there");
-      } else {
-        // console.log("cookie: ", work.index, " is gone");
-      }
-    });
+// alternate way of removing a license
+function popLicense(workIndex) {
+  return licensesOfInterest.filter(
+    (license) => license.workIndex !== workIndex
+  );
+}
+
+// remove a license using smart contract methods
+// => doesn't work since timestamp of the contract is
+// backward to that of Javascript
+async function removeLicense(license) {
+  notification(
+    `⌛ ℹ️ Removing License for "${works[license.workIndex].name}"...`
+  );
+
+  try {
+    const response = await contract.methods
+      .removeLicense(license.index, license.workIndex)
+      .send({ from: kit.defaultAccount });
+
+    notification(`🎉 License successfully removed "${works[index].name}".`);
+  } catch (error) {
+    notification(`⚠️ ${error}.`);
   }
-}, 1000);
+}
 
 // inform cUSD contract about the current transaction
 async function approve(price) {
@@ -326,25 +400,26 @@ window.addEventListener("load", async () => {
   await connectCeloWallet();
   await getBalance();
   await getWorks();
+  await getLicenses();
+  startCookieTimer();
   notificationOff();
 });
 
-console.log("editor: ", editor);
-
+// load up work details once a work is selected for edit
 selectForm.addEventListener("change", function () {
   editDiv.style.display = "block";
   console.log("selected: ", this);
 
   selectedWork = works[parseInt(this.value)];
 
-  console.log("work selected: ", selectedWork);
-
+  // set appropriate fields
   editWorkName.value = selectedWork.name;
   editImageUrl.value = selectedWork.image;
   editWorkDesc.value = selectedWork.description;
   editSelling.checked = selectedWork.selling;
   editPrice.value = selectedWork.price.shiftedBy(-ERC20_DECIMALS).toFixed(2);
 
+  // display editor if selling is true
   if (editSelling.checked) {
     richTextEditor2.style.display = "block";
     priceInput2.style.display = "block";
@@ -437,7 +512,7 @@ document
 // delete a work
 document.querySelector("#marketplace").addEventListener("click", async (e) => {
   if (e.target.className.includes("deleteBtn")) {
-    var confirmed = confirm("Sure you want to delete?");
+    let confirmed = confirm("Sure you want to delete?");
 
     if (confirmed) {
       const index = e.target.id;
@@ -493,22 +568,30 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
         .buyWorkLicense(index)
         .send({ from: kit.defaultAccount });
 
+      Cookies.set(works[index].index, works[index].name, {
+        expires: 0.000694444, // for 1 minute
+        // expires: 0.00347222, // for 5 minutes => could be changed to a month
+      });
+
       notification(`🎉 You successfully bought "${works[index].name}".`);
       getWorks();
       getBalance();
+
+      getLicenses();
+
       startCookieTimer(works[index]);
 
       setTimeout(() => {
         notificationOff();
+        browserNotification(works[index]);
       }, 5000);
-
-      browserNotification(works[index]);
     } catch (error) {
       notification(`⚠️ ${error}.`);
     }
   }
 });
 
+// Display Browser Notification
 let bNotification;
 function browserNotification(work) {
   if (notifyPermGranted) {
@@ -526,6 +609,7 @@ function browserNotification(work) {
   }
 }
 
+// request Notification permission
 Notification.requestPermission().then((perm) => {
   if (perm === "granted") {
     notifyPermGranted = true;
@@ -539,3 +623,46 @@ Notification.requestPermission().then((perm) => {
     notifyPermGranted = false;
   }
 });
+
+// should continuously check if the user buys any licenses
+// checks if cookie license is set
+setInterval(() => {
+  if (licensesOfInterest.length > 0) {
+    console.log("licenses interval: ", licensesOfInterest);
+    licensesOfInterest.forEach((license) => {
+      // times on any expired license
+      setTimeout(() => {
+        if (
+          // !license.expired &&
+          Cookies.get(license.workIndex)
+          // license.expiresOn == Date.now()
+        ) {
+          // cookie and license have
+          console.log("cookie: ", license.workIndex, " is still there");
+
+          // remove the license
+          // removeLicense(license);
+        } else {
+          console.log("cookie: ", license.workIndex, " is gone/not");
+
+          licensesOfInterest = popLicense(license.workIndex);
+        }
+      }, 60000);
+    });
+  } else {
+    console.log("empty license interest");
+  }
+}, 10000);
+
+// check if the latest purchased license has expired
+// and reload
+setInterval(() => {
+  if (interestCount - 1 === licensesOfInterest.length) {
+    console.log("you can reload");
+    interestCount--;
+
+    location.reload();
+  } else {
+    console.log("nothing yet");
+  }
+}, 1000);
