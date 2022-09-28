@@ -281,6 +281,7 @@ contract SmartCopy {
             currentWork.owner != msg.sender,
             "You can't buy a work license from yourself"
         );
+        require(getRemainingTokens(_index) > 0, "Number of license that can be obtained for work has been reached");
 
         // transfer tokens from buyer to seller
         require(
