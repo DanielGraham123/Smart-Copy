@@ -1,32 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts@4.7.3/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract SmartCopyToken is ERC20 {
-    constructor(address owner, string memory tokenName, uint supply) ERC20(tokenName, "SCP") {
-        _mint(owner, supply * 10 ** decimals());
+    constructor(
+        address owner,
+        string memory tokenName,
+        uint256 supply
+    ) ERC20(tokenName, "SCP") {
+        _mint(owner, supply * 10**decimals());
     }
 }
 
 interface ERC20Interface {
     function transfer(address, uint256) external returns (bool);
+
     function approve(address, uint256) external returns (bool);
-    function transferFrom(address, address, uint256) external returns (bool);
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external returns (bool);
+
     function totalSupply() external view returns (uint256);
+
     function balanceOf(address) external view returns (uint256);
+
     function allowance(address, address) external view returns (uint256);
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 }
 
 contract SmartCopy {
     struct Work {
         address payable owner;
         WorkInfo info;
-        uint licensePrice;
-        uint licenseCount;
+        uint256 licensePrice;
+        uint256 licenseCount;
         SmartCopyToken licenseToken;
         bool isDeleted;
         bool isSelling;
@@ -41,54 +58,100 @@ contract SmartCopy {
 
     struct License {
         address buyer;
-        uint workIndex;
-        uint issueDate;
-        uint expiringDate;
+        uint256 workIndex;
+        uint256 issueDate;
+        uint256 expiringDate;
         bool expired;
     }
 
-    uint internal worksLength = 0;
-    uint internal licensesLength = 0;
-    uint internal expiredLicensesLength = 0;
+    uint256 private worksLength = 0;
+    uint256 private licensesLength = 0;
+    uint256 private expiredLicensesLength = 0;
 
     // cUSD ERC-Token address from the Celo alfajores test network
-    address internal cUSDTokenaddress = 0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
-    address internal testaddr = 0x722f706205cF3e1C0acFCe5A4870361a4F240d24;
-    // making it public creates an inferred 'getWorks()' function
-    mapping(uint => Work) public works;
-    mapping(uint => License) public licenses;
-    mapping(uint => License) public expiredLicenses;
+    address private cUSDTokenaddress =
+        0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
+    address private testaddr = 0x722f706205cF3e1C0acFCe5A4870361a4F240d24;
 
-    uint expireDate = block.timestamp + 2 minutes;
+    mapping(uint256 => Work) private works;
+    mapping(uint256 => License) private licenses;
 
+    uint256 expireDate = 2 minutes;
+
+    // modifier to check if work has been deleted
+    modifier checkIfDeleted(uint256 _index) {
+        require(
+            works[_index].isDeleted == false,
+            "Sorry, this work has been deleted"
+        );
+        _;
+    }
+    // modifer to check the input data for struct WorkInfo
+    modifier checkInputData(WorkInfo memory _info) {
+        require(bytes(_info.description).length > 0, "Empty description");
+        require(bytes(_info.image).length > 0, "Empty image");
+        require(bytes(_info.name).length > 0, "Empty name");
+        require(bytes(_info.termsOfUse).length > 0, "Empty terms of use");
+        _;
+    }
+
+    // modifier to check if caller is the owner of work with id "_index"
+    modifier onlyWorkOwner(uint256 _index) {
+        require(
+            msg.sender == works[_index].owner,
+            "Only an author can delete his/her Work"
+        );
+        _;
+    }
+
+
+    /**
+        * @dev allow users to create a work
+        * @notice input data needs to contain only valid values
+     */
     function createWork(
         WorkInfo memory _info,
-        uint _licensePrice,
+        uint256 _licensePrice,
         bool _isSelling
-    ) public {
-
-        uint _licenseCount = 0;
+    ) public checkInputData(_info) {
+        uint256 _licenseCount = 0;
 
         // create tokens(license tokens) for each work per owner
-        SmartCopyToken _licenseToken = new SmartCopyToken(address(this), _info.name, _isSelling == true ? 100000 : 1);
+        SmartCopyToken _licenseToken = new SmartCopyToken(
+            address(this),
+            _info.name,
+            _isSelling == true ? 100000 : 1
+        );
 
         works[worksLength] = Work(
             payable(msg.sender),
-            _info, _licensePrice, _licenseCount, _licenseToken, false, _isSelling
+            _info,
+            _licensePrice,
+            _licenseCount,
+            _licenseToken,
+            false,
+            _isSelling
         );
 
         worksLength++;
     }
 
-    function readWork(uint _index) public view returns (
-        address payable,
-        WorkInfo memory,
-        uint, uint,
-        SmartCopyToken,
-        bool
-    ) {
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
-
+    /**
+        * @return Work data for a work with id "_index"
+     */
+    function readWork(uint256 _index)
+        public
+        view
+        checkIfDeleted(_index)
+        returns (
+            address payable,
+            WorkInfo memory,
+            uint256,
+            uint256,
+            SmartCopyToken,
+            bool
+        )
+    {
         return (
             works[_index].owner,
             works[_index].info,
@@ -99,112 +162,152 @@ contract SmartCopy {
         );
     }
 
-    function readWorksLength() view public returns (uint) {
+    function readWorksLength() public view returns (uint256) {
         return worksLength;
     }
 
-    function readLicensesLength() view public returns (uint) {
+    function readLicensesLength() public view returns (uint256) {
         return licensesLength;
     }
 
-    function readExpiredLicensesLength() view public returns (uint) {
-        return expiredLicensesLength;
-    }
-
-    function getWorkLicensePrice(uint _index) public view returns (uint) {
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
-        return works[_index].licensePrice;
-    } 
-
-    function getNumberOfLicenses(uint _index) public view returns (uint) {
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
-        return works[_index].licenseCount;
-    }
-
-    function getLicenseAddress(uint _index) public view returns (address) {
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
+    /**
+        * @return address returns the license smartcontract's address for a work with id "_index"
+     */
+    function getLicenseAddress(uint256 _index)
+        public
+        view
+        checkIfDeleted(_index)
+        returns (address)
+    {
         return address(works[_index].licenseToken);
     }
 
-    function updateWork(uint _index,
+    /**
+        * @dev allow work owners to update their work
+        * @notice input data needs to contain only valid values
+        * @notice Work must exists
+     */
+    function updateWork(
+        uint256 _index,
         WorkInfo memory _info,
-        uint _licensePrice,
+        uint256 _licensePrice,
         bool _isSelling
-    ) public returns (Work memory) {
-        require(msg.sender==works[_index].owner, "Only an author can delete his/her Work");
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
-        works[_index].info = _info;
-        works[_index].licensePrice = _licensePrice;
-        works[_index].isSelling = _isSelling;
+    )
+        public
+        checkIfDeleted(_index)
+        onlyWorkOwner(_index)
+        checkInputData(_info)
+        returns (Work memory)
+    {
+        Work storage currentWork = works[_index];
+
+        currentWork.info = _info;
+        currentWork.licensePrice = _licensePrice;
+        currentWork.isSelling = _isSelling;
 
         return works[_index];
     }
 
-    function deleteWork(uint _index) public {
-        require(msg.sender == works[_index].owner, "Only an author can delete his/her Work");
-        require(works[_index].licenseCount == 0, "The work cannot be deleted if some licenses are alread issued");
+    function deleteWork(uint256 _index)
+        public
+        checkIfDeleted(_index)
+        onlyWorkOwner(_index)
+    {
+        require(
+            works[_index].licenseCount == 0,
+            "The work cannot be deleted if some licenses are already issued"
+        );
         delete works[_index];
         works[_index].isDeleted = true;
     }
 
-    function removeLicense(uint _index, uint _workIndex) public {
-        licenses[_index].expired = true;
-
-        expiredLicenses[expiredLicensesLength] = licenses[_index];
-
-        expiredLicensesLength++; 
+    /**
+        * @dev sets a license to become expired
+        * @notice expiring date has to be reached
+     */
+    function removeLicense(uint256 _index, uint256 _workIndex)
+        public
+    {
+        License storage currentLicense = licenses[_index];
+        require(currentLicense.workIndex == _workIndex,"This license isn't associated with the requested work index");
+        require(currentLicense.expiringDate <= block.timestamp, "License hasn't expired yet");
+        currentLicense.expired = true;
         works[_workIndex].licenseCount--;
-
-        delete licenses[_index];
-
     }
 
-    function getExpiredLicenses(uint _index) 
-                public view returns (
-                    address, 
-                    uint, 
-                    uint, uint, bool) {
-        require(licensesLength > 0, "Sorry, there no licenses");
-        require(expiredLicensesLength > 0, "Sorry, there no expired licenses");
-
+    function getExpiredLicenses(uint256 _index)
+        public
+        view
+        returns (
+            address,
+            uint256,
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        require(
+            licensesLength > 0 && _index < licensesLength,
+            "Sorry, there no licenses"
+        );
         return (
-            expiredLicenses[_index].buyer,
-            expiredLicenses[_index].workIndex,
-            expiredLicenses[_index].issueDate,
-            expiredLicenses[_index].expiringDate,
-            expiredLicenses[_index].expired
+            licenses[_index].buyer,
+            licenses[_index].workIndex,
+            licenses[_index].issueDate,
+            licenses[_index].expiringDate,
+            licenses[_index].expired
         );
     }
 
-    function getRemainingTokens(uint _index) public view returns (uint) {
-        return works[_index].licenseToken.totalSupply() / 10**18;
+    function getRemainingTokens(uint256 _index)
+        public
+        view
+        checkIfDeleted(_index)
+        returns (uint256)
+    {
+        return works[_index].licenseToken.totalSupply() / 1 ether;
     }
 
-    function buyWorkLicense(uint _index) public payable {
-        // check if the work has not been deleted
-        require(works[_index].isDeleted == false, "Sorry, this work has been deleted");
+    /**
+        * @dev allow users to buy a work license from a work with id "index"
+     */
+    function buyWorkLicense(uint256 _index)
+        public
+        payable
+        checkIfDeleted(_index)
+    {
+        Work storage currentWork = works[_index];
+        require(
+            currentWork.owner != msg.sender,
+            "You can't buy a work license from yourself"
+        );
 
-        // transfer tokens from buyer to seller 
+        // transfer tokens from buyer to seller
         require(
             ERC20Interface(cUSDTokenaddress).transferFrom(
-                msg.sender, 
-                works[_index].owner, 
-                works[_index].licensePrice), "Transaction Failed");
+                msg.sender,
+                currentWork.owner,
+                currentWork.licensePrice
+            ),
+            "Transaction Failed"
+        );
 
         // issue license token to buyer
-        require(works[_index].licenseToken.transfer(msg.sender,1), "Transfer of License token to buyer failed");
-        
-        works[_index].licenseCount++;
+        require(
+            currentWork.licenseToken.transfer(msg.sender, 1 ether),
+            "Transfer of License token to buyer failed"
+        );
+
+        currentWork.licenseCount++;
+
+        License storage currentLicense = licenses[licensesLength];
+        licensesLength++;
 
         // register the license
-        licenses[licensesLength].buyer = msg.sender;
-        licenses[licensesLength].workIndex = _index;
-        licenses[licensesLength].issueDate = block.timestamp;
-        licenses[licensesLength].expiringDate = expireDate; // licenses expire after 1 month by default
-        licenses[licensesLength].expired = false;
-
-        licensesLength++;
-        
+        currentLicense.buyer = msg.sender;
+        currentLicense.workIndex = _index;
+        currentLicense.issueDate = block.timestamp;
+        currentLicense.expiringDate = block.timestamp + expireDate; // licenses expire after 2 minutes by default
+        currentLicense.expired = false;
     }
-
 }
