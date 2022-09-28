@@ -39,7 +39,7 @@ The novelty here is the ability to sign your work by creating ERC20 tokens that 
 
 ## Live Demo
 
-[Smart Copyright Licensing DApp](https://danielgraham123.github.io/smartcopy/)
+[Smart Copyright Licensing DApp](https://danielgraham123.github.io/Smart-Copy/)
 
 ## Usage
 
