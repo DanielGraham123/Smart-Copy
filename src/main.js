@@ -5,7 +5,7 @@ import marketplaceAbi from "../contract/smart-copy.abi.json";
 import erc20Abi from "../contract/erc20.abi.json";
 
 const ERC20_DECIMALS = 18;
-const MPContractAddress = "0x89b42a43D502Ab7057956a7570F174Aa8e617C28";
+const MPContractAddress = "0xf99Fda78A0ce213d0D3e49C087aA4E9EEf12FdfC";
 // cUSD smart contract address
 const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
@@ -34,6 +34,7 @@ let editSelling = document.querySelector("#editSelling");
 let editPrice = document.querySelector("#editPrice");
 
 editDiv.style.display = "none";
+editWorkBtn.style.display = "none";
 
 const connectCeloWallet = async () => {
   // check if celo object exists
@@ -99,7 +100,6 @@ async function getWorks() {
 
 async function getLicenses() {
   const licensesCount = await contract.methods.readLicensesLength().call();
-  editWorkBtn.style.display = "none";
   const _licenses = [];
   for (let i = 0; i < licensesCount; i++) {
     let _license = new Promise(async (resolve, reject) => {
@@ -158,7 +158,7 @@ function productTemplate(_work) {
   let currentViewer = _work.owner == kit.defaultAccount;
 
   return `
-     <div class="card mb-4 ${_work.deleted && "d-none"}">
+     <div class="card bg-dark text-white mb-4 ${_work.deleted && "d-none"}">
       <img class="card-img-top" src="${_work.image}" alt="...">
      
      <div class="position-absolute top-0 end-0 mt-2 mr-4">
@@ -178,7 +178,7 @@ function productTemplate(_work) {
           ${_work.description}             
         </p>
         <p class="card-text mt-4">
-          <span><a class="text-warning" href="${celoExplorer}/token/${
+          <span><a class="text-greenblue" href="${celoExplorer}/token/${
     _work.licenseTokenAddr
   }/token-transfers" target="_blank" id="${_work.index}">License Token</a>
           <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>
@@ -188,7 +188,7 @@ function productTemplate(_work) {
         <div class="d-grid gap-2">
         
         <!-- show read button -->
-          <a class="btn btn-lg btn-info viewBtn fs-6 p-3" id="${
+          <a class="btn btn-lg btn-infom viewBtn fs-6 p-3" id="${
             _work.index
           }"  data-bs-toggle="modal"
               data-bs-target="#viewWorkModal${_work.index}">
@@ -196,7 +196,7 @@ function productTemplate(_work) {
           </a>
         
         <!-- only show Buy button if owner sells copyright licenses and if viewer isn't the owner-->
-          <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3 ${
+          <a class="btn btn-lg btn-outline-greenblue buyBtn fs-6 p-3 ${
             (!_work.selling || currentViewer || Cookies.get(_work.index)) &&
             "d-none"
           }" id=${_work.index}>
@@ -260,10 +260,10 @@ function productTemplate(_work) {
               <div class="border border-dark p-3">
                 ${_work.terms}
                 
-                <div class="border border-3 border-success shadow p-1 text-center ${
+                <div class="border border-3 border-grb shadow p-1 text-center ${
                   !_work.selling && "d-none"
                 }">
-                  Copyright Licenses are issued at a price of <br /> <strong class="text-success fs-5">${_work.price
+                  Copyright Licenses are issued at a price of <br /> <strong class="text-greenblue fs-5">${_work.price
                     .shiftedBy(-ERC20_DECIMALS)
                     .toFixed(2)} cUSD</strong>
                 </div>
@@ -274,13 +274,13 @@ function productTemplate(_work) {
           <div class="modal-footer">
             <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>
              <a
-              class="btn btn-outline-dark buyBtn fs-6  ${
+              class="btn btn-outline-greenblue buyBtn fs-6  ${
                 (!_work.selling || currentViewer) && "d-none"
               }"
               data-bs-dismiss="modal"
               id="${_work.index}"
             >
-              Buy for <strong class="text-success">${_work.price
+              Buy for <strong>${_work.price
                 .shiftedBy(-ERC20_DECIMALS)
                 .toFixed(2)} cUSD</strong>
             </a>
@@ -520,9 +520,12 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
           return;
         } else {
-          notification(
-            `Sorry, you can't delete this work as lts license is currently in use.`
-          );
+          console.log("license counts: ", works[index].licenseCount);
+          setTimeout(() => {
+            notification(
+              `Sorry, you can't delete this work as lts license is currently in use.`
+            );
+          }, 15000);
         }
       } catch (error) {
         notification(`⚠️ ${error}.`);

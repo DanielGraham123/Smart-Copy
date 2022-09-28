@@ -50,6 +50,70 @@
         box-shadow: 0 0 0 0.1rem #1a1a21 !important;
       }
 
+      body {
+        background-color: #171a1d;
+      }
+
+      .text-greenblue {
+        color: #63aded;
+      }
+
+      .bg-greenblue,
+      .btn-greenblue {
+        background-color: #1d70b8;
+      }
+
+      .btn-greenblue:hover {
+        background-color: #1d70b8cb;
+      }
+
+      .btn-greenblue {
+        color: white !important;
+      }
+
+      .btn-edit {
+        background-color: #0a98ca;
+        color: white !important;
+      }
+
+      .btn-edit:hover {
+        background-color: #0a97cad5;
+      }
+
+      .btn-outline-greenblue {
+        color: #63aded;
+        border-color: #1d70b8;
+      }
+
+      .btn-outline-greenblue:hover {
+        background-color: #1d70b8;
+        color: #fff;
+      }
+
+      .buyBtn.btn-outline-greenblue {
+        border-bottom: 5px solid #5284b0;
+        border-top: 2px solid #457eb1;
+        border-left: 2px solid #457eb1;
+        border-right: 2px solid #457eb1;
+      }
+
+      .btn-infom {
+        color: #fff;
+        border-bottom: 4px solid #f3f3f3;
+        border-top: 1px solid #f3f3f3;
+        border-left: 1px solid #f3f3f3;
+        border-right: 1px solid #f3f3f3;
+      }
+
+      .btn-infom:hover {
+        color: #f3f3f3;
+        background-color: #171a1d;
+      }
+
+      .border-grb {
+        border-color: #1d70b8 !important;
+      }
+
       @media (min-width: 576px) {
         .card {
           border: 0;
@@ -67,10 +131,10 @@
   </head>
   <body>
     <div class="container mt-2" style="max-width: 72em">
-      <nav class="navbar bg-white navbar-light">
+      <nav class="navbar bg-greenblue navbar-light rounded-pill ps-3 mt-3">
         <div class="container-fluid">
-          <span class="navbar-brand m-0 h4 fw-bold">Smart~Copy</span>
-          <span class="nav-link border rounded-pill bg-light">
+          <span class="navbar-brand m-0 h4 fw-bold text-white">Smart~Copy</span>
+          <span class="nav-link border rounded-pill bg-dark text-white">
             <span id="balance">0</span>
             cUSD
           </span>
@@ -83,14 +147,14 @@
 
       <div class="my-4">
         <a
-          class="btn btn-dark rounded-pill"
+          class="btn btn-greenblue rounded-pill"
           data-bs-toggle="modal"
           data-bs-target="#addModal"
         >
           Register New Work
         </a>
         <a
-          class="float-end btn btn-primary rounded-pill"
+          class="float-end btn btn-edit rounded-pill"
           id="editWorkBtn"
           data-bs-toggle="modal"
           data-bs-target="#editModal"
@@ -195,7 +259,7 @@
             </button>
             <button
               type="button"
-              class="btn btn-dark"
+              class="btn btn-greenblue"
               data-bs-dismiss="modal"
               id="newWorkBtn"
             >
