@@ -73,7 +73,7 @@ const getBalance = async function () {
 async function getWorks() {
   const worksCount = await contract.methods.readWorksLength().call();
   editWorkBtn.style.display = "none";
-  console.log("number of works", worksCount);
+  
   const _works = [];
   for (let i = 0; i < worksCount; i++) {
     let _work = new Promise(async (resolve, reject) => {
@@ -122,7 +122,7 @@ function renderWorks() {
   document.getElementById("marketplace").innerHTML = "";
   let cleanedWorks = works.filter((work) => !work.deleted);
   if (cleanedWorks.length > 0) {
-    console.log("cleaned ", cleanedWorks);
+    
 
     editWorkBtn.style.display = "block";
   }
@@ -154,7 +154,7 @@ function ownerWorks(works) {
 }
 
 function productTemplate(_work) {
-  console.log("_selling: ", _work.selling);
+  
   let currentViewer = _work.owner == kit.defaultAccount;
 
   return `
@@ -332,7 +332,7 @@ function startCookieTimer() {
 
   // retrieve the licenses with latest issued date/time
   if (newLicenses.length > 0) {
-    console.log("new licenses: ", newLicenses);
+    
 
     let cookieOfInterest = Math.max(...newLicenses.map((x) => x.issuedOn));
 
@@ -362,7 +362,7 @@ async function removeLicense(license) {
   );
 
   try {
-    const response = await contract.methods
+    await contract.methods
       .removeLicense(license.index, license.workIndex)
       .send({ from: kit.defaultAccount });
 
@@ -376,11 +376,11 @@ async function removeLicense(license) {
 async function approve(price) {
   const cUSDContract = new kit.web3.eth.Contract(erc20Abi, cUSDContractAddress);
 
-  const response = await cUSDContract.methods
+  return await cUSDContract.methods
     .approve(MPContractAddress, price)
     .send({ from: kit.defaultAccount });
 
-  return response;
+  
 }
 
 window.addEventListener("load", async () => {
@@ -396,7 +396,7 @@ window.addEventListener("load", async () => {
 // load up work details once a work is selected for edit
 selectForm.addEventListener("change", function () {
   editDiv.style.display = "block";
-  console.log("selected: ", this);
+  
 
   selectedWork = works[parseInt(this.value)];
 
@@ -520,7 +520,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
           return;
         } else {
-          console.log("license counts: ", works[index].licenseCount);
+          
           setTimeout(() => {
             notification(
               `Sorry, you can't delete this work as lts license is currently in use.`
@@ -549,7 +549,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
     notification(`⌛ Awaiting payment for "${works[index].name}"...`);
 
     try {
-      const response = await contract.methods
+      await contract.methods
         .buyWorkLicense(index)
         .send({ from: kit.defaultAccount });
 
@@ -579,7 +579,9 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 // Display Browser Notification
 let bNotification;
 function browserNotification(work) {
-  if (notifyPermGranted) {
+  if(!notifyPermGranted){
+    return  alert("License set for 2 minutes");
+  }
     bNotification = new Notification(work.name, {
       body: "License set for 2 minutes",
       data: { exp: work.index },
@@ -589,9 +591,7 @@ function browserNotification(work) {
     bNotification.addEventListener("error", (e) => {
       alert("Notification not Granted");
     });
-  } else {
-    alert("License set for 2 minutes");
-  }
+  
 }
 
 // request Notification permission
@@ -603,9 +603,10 @@ Notification.requestPermission().then((perm) => {
       body: "Welcome",
       tag: "Welcome",
     });
-  } else {
-    notifyPermGranted = false;
-  }
+    return
+  } 
+  notifyPermGranted = false;
+
 });
 
 // should continuously check if the user buys any licenses
@@ -622,7 +623,7 @@ setInterval(() => {
           !Cookies.get(license.workIndex)
           // license.expiresOn == Date.now()
         ) {
-          console.log("cookie: ", license.workIndex, " is gone/not");
+          
 
           licensesOfInterest = popLicense(license.workIndex);
         }
@@ -636,10 +637,8 @@ setInterval(() => {
 setInterval(() => {
   if (interestCount - 1 === licensesOfInterest.length) {
     interestCount--;
-    console.log("Reloading...");
+    
 
     location.reload();
-  } else {
-    console.log("nothing yet");
-  }
+  } 
 }, 1000);
